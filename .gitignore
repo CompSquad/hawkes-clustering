@@ -2,3 +2,4 @@
 .pydevproject
 *.pyc
 .ipynb_checkpoints
+hawkes/GAZPRU.csv
