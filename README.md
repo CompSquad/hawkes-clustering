@@ -1,7 +1,7 @@
-# hawkes-clustering
+# Hawkes-clustering
 
 Clustering with hawks processes.
 
-# Usage
+## Usage
 
 The `Hawkes.ipynb` notebook.
