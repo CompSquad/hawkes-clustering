@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import newton
-from numpy import int64
+
 
 def TDMatrix(t):
     """ Computes the matrix of time differences with entry m_ij = t_i - t_j.
@@ -60,13 +60,12 @@ def Q(mu, a, b, t, p, dt):
         New param.
     b : float
         New param.
-    
     t : array-like
         Times of events.
     p : ndarray
         2D array of parenthood probabilities.
     dt : ndarray
-        Time differences.
+        2D array of time differences.
     
     Returns
     -------
