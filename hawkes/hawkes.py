@@ -26,13 +26,15 @@ def TDMatrix(t):
             dt[i, j] = t[i] - t[j] if t[i] - t[j] >= 0 else -np.inf
     return dt
     
-def StructureProbMatrix(dt, b):
+def StructureProbMatrix(dt, mu, b):
     """ Compute the structure matrix with entries m_ij = P(u_i = j).
     
     Parameters
     ----------
     dt : ndarray
         Array of time differences.
+    mu : float
+        Immigrant density.
     b : float
         Model parameter (in the kernel).
     
@@ -42,6 +44,7 @@ def StructureProbMatrix(dt, b):
         Array of parenthood probabilities.
     """
     p = np.exp(b * dt)
+    p[np.diag_indices(p.shape[0])] = mu
     p /= np.sum(p, axis=1)[np.newaxis].T
     return p
 
@@ -93,7 +96,7 @@ def f(t, T, S0, S1, S2):
         return fc
     return fclosed
 
-def ExpectationMaximization(t, niter=100, mu0=1, a0=1, b0=.5, callback=None):
+def ExpectationMaximization(t, niter=100, mu0=.9, a0=.8, b0=.5, callback=None):
     """ Expectation-Maximization as described in Guillaume's PDF. """
     
     # Basic data structures and initialization
@@ -104,7 +107,7 @@ def ExpectationMaximization(t, niter=100, mu0=1, a0=1, b0=.5, callback=None):
     for _ in xrange(niter):
         
         # Expectation
-        p = StructureProbMatrix(dt, b)
+        p = StructureProbMatrix(dt, mu, b)
         
         # Maximization
         dt[dt < 0] = 0  # Small hack
@@ -117,23 +120,37 @@ def ExpectationMaximization(t, niter=100, mu0=1, a0=1, b0=.5, callback=None):
         a = b * S1 / np.sum(1 - np.exp(-b * (T - t)))
         
         if callback is not None:
-            callback(mu, a , b, t, p, dt)
-        
+            callback(mu, a , b, t, p, dt, T, S0, S1, S2)
+
+def pplot(f):
+    import matplotlib.pyplot as plt
+    
+    xx = np.linspace(-1, 4, 1000)
+    fx = [f(x) for x in xx]
+    plt.plot(xx, fx)
+    plt.xlabel("b")
+    plt.ylabel("f(b)")
+    plt.title("Find a root with Newton's method...")
+    plt.show()
+       
 if __name__ == "__main__":
     
     import pandas as pd
     
-    df = pd.read_csv('GAZPRU.csv', parse_dates=['TradeDateTime'], index_col='TradeDateTime')
+    df = pd.read_csv('../GAZPRU.csv', parse_dates=['TradeDateTime'], index_col='TradeDateTime')
     ts = pd.Series(df.index)
     time = sorted(ts.astype(int))
     time = np.array(time)
     time -= time[0]
-    time = time[:100]
+    time = time[:4]
     time = time / float(time[-1])
     
-    def inspect(mu, a, b, t, p, dt):
+    def inspect(mu, a, b, t, p, dt, T, S0, S1, S2):
         print ("(mu, a, b) = (%.2f, %.2f, %.2f)" % (mu, a, b)).ljust(35),
         print "Q = %s" % Q(mu, a, b, t, p, dt)
+        print dt
+        print p
+        pplot(f(t, T, S0, S1, S2))
         
     ExpectationMaximization(time, 100, callback=inspect)
     
