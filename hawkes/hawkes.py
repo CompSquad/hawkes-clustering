@@ -189,7 +189,8 @@ if __name__ == "__main__":
         plt.xlabel("b")
         plt.ylabel("f(b)")
         plt.title("Find a root with Newton's method...")
-        plt.plot(xx, S1 + S2 * xx, '--')
+        plt.axvline(b, color='k', linestyle='--')
+#         plt.plot(xx, S1 + S2 * xx, '--')  # Asymptotic line +inf
         plt.show()
         
     ExpectationMaximization(time, 100, callback=inspect)
