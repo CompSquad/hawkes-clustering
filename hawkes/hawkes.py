@@ -153,7 +153,7 @@ def ExpectationMaximization(t, niter=100, mu0=.9, a0=.8, b0=.5, callback=None):
         S2 = -(p * dt).sum()
         
         mu = S0 / T
-        b = newton(f(t, T, S0, S1, S2), b, tol=0.1)
+        b = newton(f(t, T, S0, S1, S2), b)
         a = b * S1 / np.sum(1 - np.exp(-b * (T - t)))
         
         if callback is not None:
