@@ -1,4 +1,5 @@
 import numpy as np
+from collections import defaultdict
 from scipy.optimize import newton
 
 
@@ -189,6 +190,28 @@ def GetTimeSeriesFromCSV(filepath, nbpoints=None):
         time = time[:nbpoints]
     time = time / float(time[-1])
     return time
+
+def GetLeadersFollowers(p):
+    """ Retrieve a dictionary of the leaders and followers
+    :param p: matrix of (P[u_i=j]) where P[u_i=j] is the probability that jump_i was triggered by jump_j
+    :return: dictionnary where keys are the indices of the jumps and values are dictionnary with keys "leader" and "followers" with values
+    are sets of leader of the jumps and its followers. A jump with a set for key "leader" containing its number is an immigrant event.
+    """
+    dict_leaders_followers = defaultdict(dict)
+    ind_max = np.argmax(p, axis=1)
+    for i, ind in enumerate(ind_max):
+        #print i, ind
+        dict_leaders_followers[i] = {"leader": [], "followers": []}
+        if i == ind:
+            #print '----', i, ind, i == ind
+            dict_leaders_followers[i]["leader"].append(i)
+        else:
+            #print i == ind
+            dict_leaders_followers[ind]["followers"].append(i)
+            dict_leaders_followers[i]["leader"].append(ind)
+    return dict_leaders_followers
+
+
 
 
 if __name__ == "__main__":
