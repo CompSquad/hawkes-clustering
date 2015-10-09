@@ -127,14 +127,17 @@ def f(t, T, S0, S1, S2):
     fclosed : A function
     """
     def fclosed(b):
-        fc = S1 + b * S2 \
-             - (b**2 * S1 * np.sum((T - t) * np.exp(-b * (T - t))) /
-                np.sum(1 - np.exp(-b * (T - t))))
+        fc = (S1 + b * S2) \
+#              - b**2 * S1 * np.sum((T - t) * np.exp(-b * (T - t))) \
+#              / np.sum(1 - np.exp(-b * (T - t)))
+        fc = S2 + S1 / b - S1 * (np.sum((T - t) * np.exp(-b * (T - t)))
+                                 / np.sum(1 - np.exp(-b * (T - t))))
         return fc
     return fclosed
 
 def ExpectationMaximization(t, niter=100, mu0=.9, a0=.8, b0=.5, callback=None):
-    """ Expectation-Maximization as described in Guillaume's PDF. """
+    """ Expectation-Maximization as described in Guillaume's PDF.
+    """
     
     # Basic data structures and initialization
     T = t[-1] - t[0]
@@ -148,50 +151,55 @@ def ExpectationMaximization(t, niter=100, mu0=.9, a0=.8, b0=.5, callback=None):
 #         p = StructProbMatrixFromTime(t, mu, a, b)
         
         # Maximization
-        dt[dt < 0] = 0  # Small hack
         S0 = np.sum(np.diag(p))
-        S1 = p.sum() - S0
-        S2 = (p * dt).sum()
+        S1 = len(t) - S0
+        S2 = -(p * dt).sum()
         
         mu = S0 / T
-        b = newton(f(t, T, S0, S1, S2), b, maxiter=1000, tol=0.1)
+        b = newton(f(t, T, S0, S1, S2), b, tol=0.1)
         a = b * S1 / np.sum(1 - np.exp(-b * (T - t)))
         
         if callback is not None:
             callback(mu, a , b, t, p, dt, T, S0, S1, S2)
+
+
+def GetTimeSeriesFromCSV(filepath, nbpoints=None):
+    """ Retrieve time series data from CSV file.
     
-       
-if __name__ == "__main__":
+    Parameters
+    ----------
+    filepath : str
+        Path to the CSV file.
+    nbpoints : int
+        The number of points to retrieve.
     
+    Returns
+    -------
+    time : ndarray
+        An array of floating point number from 0. to 1. reresentinf time stamps.
+    """
     import pandas as pd
     
-    df = pd.read_csv('../GAZPRU.csv', parse_dates=['TradeDateTime'], index_col='TradeDateTime')
+    df = pd.read_csv(filepath, parse_dates=['TradeDateTime'],
+                     index_col='TradeDateTime')
     ts = pd.Series(df.index)
     time = sorted(ts.astype(int))
     time = np.array(time)
     time -= time[0]
-    time = time[:100]
+    if nbpoints is not None:
+        time = time[:nbpoints]
     time = time / float(time[-1])
+    return time
+
+
+if __name__ == "__main__":
+    
+    time = GetTimeSeriesFromCSV('../GAZPRU.csv', nbpoints=1000)
     
     def inspect(mu, a, b, t, p, dt, T, S0, S1, S2):
         """ A function called after each iteration of the EM algorithm. """
-        
-        import matplotlib.pyplot as plt
-        np.set_printoptions(1)
-        
         print ("(mu, a, b) = (%.2f, %.2f, %.2f)" % (mu, a, b)).ljust(35),
         print "Q = %s" % Q(mu, a, b, t, p, dt)
-        print dt
-        print p
-        xx = np.linspace(-1, 50, 1000)
-        fx = [f(t, T, S0, S1, S2)(x) for x in xx]
-        plt.plot(xx, fx)
-        plt.xlabel("b")
-        plt.ylabel("f(b)")
-        plt.title("Find a root with Newton's method...")
-        plt.axvline(b, color='k', linestyle='--')
-#         plt.plot(xx, S1 + S2 * xx, '--')  # Asymptotic line +inf
-        plt.show()
         
     ExpectationMaximization(time, 100, callback=inspect)
     
