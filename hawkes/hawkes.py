@@ -176,7 +176,8 @@ def GetTimeSeriesFromCSV(filepath, nbpoints=None):
     Returns
     -------
     time : ndarray
-        An array of floating point number from 0. to 1. reresentinf time stamps.
+        An array of floating point number from 0. to 1. representing time 
+        stamps.
     """
     import pandas as pd
     
