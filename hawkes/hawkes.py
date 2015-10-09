@@ -127,9 +127,6 @@ def f(t, T, S0, S1, S2):
     fclosed : A function
     """
     def fclosed(b):
-        fc = (S1 + b * S2) \
-#              - b**2 * S1 * np.sum((T - t) * np.exp(-b * (T - t))) \
-#              / np.sum(1 - np.exp(-b * (T - t)))
         fc = S2 + S1 / b - S1 * (np.sum((T - t) * np.exp(-b * (T - t)))
                                  / np.sum(1 - np.exp(-b * (T - t))))
         return fc
@@ -161,7 +158,8 @@ def ExpectationMaximization(t, niter=100, mu0=.9, a0=.8, b0=.5, callback=None):
         
         if callback is not None:
             callback(mu, a , b, t, p, dt, T, S0, S1, S2)
-
+            
+    return mu, a, b, p
 
 def GetTimeSeriesFromCSV(filepath, nbpoints=None):
     """ Retrieve time series data from CSV file.
@@ -195,12 +193,12 @@ def GetTimeSeriesFromCSV(filepath, nbpoints=None):
 
 if __name__ == "__main__":
     
-    time = GetTimeSeriesFromCSV('../GAZPRU.csv', nbpoints=1000)
+    time = GetTimeSeriesFromCSV('../GAZPRU.csv', nbpoints=100)
     
     def inspect(mu, a, b, t, p, dt, T, S0, S1, S2):
         """ A function called after each iteration of the EM algorithm. """
         print ("(mu, a, b) = (%.2f, %.2f, %.2f)" % (mu, a, b)).ljust(35),
         print "Q = %s" % Q(mu, a, b, t, p, dt)
         
-    ExpectationMaximization(time, 100, callback=inspect)
+    mu, a, b, p = ExpectationMaximization(time, 100, callback=inspect)
     
