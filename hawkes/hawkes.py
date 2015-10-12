@@ -162,59 +162,11 @@ def ExpectationMaximization(t, niter=100, mu0=.9, a0=.8, b0=.5, callback=None):
             
     return mu, a, b, p
 
-def GetTimeSeriesFromCSV(filepath, nbpoints=None):
-    """ Retrieve time series data from CSV file.
-    
-    Parameters
-    ----------
-    filepath : str
-        Path to the CSV file.
-    nbpoints : int
-        The number of points to retrieve.
-    
-    Returns
-    -------
-    time : ndarray
-        An array of floating point number from 0. to 1. representing time 
-        stamps.
-    """
-    import pandas as pd
-    
-    df = pd.read_csv(filepath, parse_dates=['TradeDateTime'],
-                     index_col='TradeDateTime')
-    ts = pd.Series(df.index)
-    time = sorted(ts.astype(int))
-    time = np.array(time)
-    time -= time[0]
-    if nbpoints is not None:
-        time = time[:nbpoints]
-    time = time / float(time[-1])
-    return time
-
-def GetLeadersFollowers(p):
-    """ Retrieve a dictionary of the leaders and followers
-    :param p: matrix of (P[u_i=j]) where P[u_i=j] is the probability that jump_i was triggered by jump_j
-    :return: dictionnary where keys are the indices of the jumps and values are dictionnary with keys "leader" and "followers" with values
-    are sets of leader of the jumps and its followers. A jump with a set for key "leader" containing its number is an immigrant event.
-    """
-    dict_leaders_followers = defaultdict(dict)
-    ind_max = np.argmax(p, axis=1)
-    for i, ind in enumerate(ind_max):
-        #print i, ind
-        dict_leaders_followers[i] = {"leader": [], "followers": []}
-        if i == ind:
-            #print '----', i, ind, i == ind
-            dict_leaders_followers[i]["leader"].append(i)
-        else:
-            #print i == ind
-            dict_leaders_followers[ind]["followers"].append(i)
-            dict_leaders_followers[i]["leader"].append(ind)
-    return dict_leaders_followers
-
-
 
 
 if __name__ == "__main__":
+        
+    from utils import GetTimeSeriesFromCSV
     
     time = GetTimeSeriesFromCSV('../GAZPRU.csv', nbpoints=100)
     
