@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import numpy as np
 
-def GetTimeSeriesFromCSV(filepath, nbpoints=None):
+def GetTimeSeriesFromCSV(filepath, nb_points=None):
     """ Retrieve time series data from CSV file.
     
     Parameters
@@ -22,14 +22,60 @@ def GetTimeSeriesFromCSV(filepath, nbpoints=None):
     
     df = pd.read_csv(filepath, parse_dates=['TradeDateTime'],
                      index_col='TradeDateTime')
-    ts = pd.Series(df.index)
-    time = sorted(ts.astype(int))
+    ds = df.sort()
+    ts = pd.Series(ds.index)
+    time = ts.astype(int)
     time = np.array(time)
     time -= time[0]
-    if nbpoints is not None:
-        time = time[:nbpoints]
+    if nb_points is not None:
+        time = time[:nb_points]
     time = time / float(time[-1])
-    return time
+    return time, ds.ix[:nb_points, :]
+
+
+def GetInfluenceMatrix(p, customer_ids, stat_func=np.mean):
+    """ Builds influencer matrix.
+    
+    By default entry u_{i, j} = E(i is an influencer of j). Custom influence
+    scores can be passed to `stat_func`.
+    
+    Parameters
+    __________
+    p : ndarray[ndim=2]
+        matrix of (P[u_i=j]) where P[u_i=j] is the probability that jump_i was
+        triggered by jump_j.
+    customer_ids: ndarray[ndim=1]
+        A mark vector with client ids.
+    
+    Returns
+    _______
+    adjancy_matrix: ndarray
+        Matrix with entries u_{i, j} corresponding to the influence of i on j.
+    """
+    assert(p.shape[0] == len(customer_ids == p.shape[1]))
+    unique_ids = np.unique(customer_ids)
+    n_customers = len(unique_ids)
+    adjancy_matrix = np.zeros((n_customers, n_customers), dtype=np.float32)
+    for i, child in enumerate(unique_ids):
+        cids = np.nonzero(customer_ids == child)[0]
+        pc = p[cids, :]
+        for j, parent in enumerate(unique_ids):
+            pids = np.nonzero(customer_ids == parent)[0]
+            pp = pc[:, pids]
+            adjancy_matrix[j, i] = stat_func(pp)
+    return adjancy_matrix, unique_ids
+
+def InfluenceMatrixToGDF(g, unique_ids, filename="influence.gdf"):
+    with open(filename, 'w') as f:
+        f.write('nodedef> name VARCHAR\n')
+        for node in unique_ids:
+            f.write("{}\n".format(node))
+        f.write('edgedef> node1 VARCHAR, node2 VARCHAR, weight DOUBLE\n')
+        N = g.shape[0]
+        for i in xrange(N):
+            for j in xrange(N):
+                f.write("{}, {}, {}\n".format(unique_ids[i], unique_ids[j], g[i, j]))
+
 
 def GetLeadersFollowers(p):
     """ Retrieve a dictionary of the leaders and followers.
