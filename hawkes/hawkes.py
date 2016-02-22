@@ -1,5 +1,7 @@
 import numpy as np
+
 from scipy.optimize import newton
+from scipy.sparse import csr_matrix
 
 
 def TDMatrix(t):
@@ -19,11 +21,52 @@ def TDMatrix(t):
         The time differences matrix.
     """
     n = len(t)
-    dt = np.empty((n, n))
+    dt = np.zeros((n, n))
     for i in xrange(n):
-        for j in xrange(n):
-            dt[i, j] = max(0, t[i] - t[j])
+        for j in xrange(i + 1):
+            dt[i, j] = t[i] - t[j]
     return dt
+
+
+def SparseTDMatrix(t, max_td=0.0):
+    n = len(t)
+    row = []
+    col = []
+    data = []
+    for i in xrange(n):
+        for j in xrange(i + 1):
+            td = t[i] - t[j]
+            if td >= max_td:
+                row.append(i)
+                col.append(j)
+                data.append(td)
+    sparse_td = csr_matrix((data, (row, col)), shape=(n, n))
+    return sparse_td
+
+
+def SparseStructProbMatrix(dt, mu, a, b):
+    """ Compute the structure matrix with entries m_ij = P(u_i = j).
+    
+    Parameters
+    ----------
+    dt : ndarray
+        2D array of time differences.
+    mu : float
+        Immigrant density.
+    a : float 
+        Kernel parameter.
+    b : float
+        Kernel parameter.
+    
+    Returns
+    -------
+    p : ndarray
+        Array of parenthood probabilities.
+    """
+    p = a * np.exp(-b * dt.data)
+    p[np.diag_indices(p.shape[0])] = mu
+    p /= np.sum(p, axis=1)[np.newaxis].T
+    return p           
 
    
 def StructProbMatrix(dt, mu, a, b):
