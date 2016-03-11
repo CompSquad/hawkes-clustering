@@ -89,9 +89,9 @@ def ToSparse(df, nrow, ncol):
     return train_coo
 
 
-def Cluster(train, M_clusters=10, N_clusters=10):
+def Cluster(train, rank=10, M_clusters=10, N_clusters=10):
     
-    model = nimfa.Nmf(train.todense(), seed='random_vcol', rank=10, max_iter=100)
+    model = nimfa.Nmf(train.todense(), seed='random_vcol', rank=rank, max_iter=100)
     mfit = model()
     M = np.array(mfit.coef())
     N = np.array(mfit.basis())
@@ -114,26 +114,20 @@ def Cluster(train, M_clusters=10, N_clusters=10):
     return M, N, YM, YN 
 
 
-def GetClosestCustomerCluster(ticker, train, df, M_clusters=10, N_clusters=10):
+def GetClosestCustomerCluster(ticker, train, df, rank=10, M_clusters=10, N_clusters=10):
     
     M, N, YM, YN = Cluster(train, M_clusters, N_clusters)
     row_idx = {tck: i for i, tck in enumerate(set(df['Ticker']))}
     
-    inverted_index = dict((ticker_id, ticker) for ticker, ticker_id in row_idx.iteritems())
-    centroidN = np.mean(N[YN == YN[row_idx['GAZPRU']]], axis=0)
+    centroidN = N[YN == YN[row_idx['GAZPRU']]][0]
     
-    # Get closest cluster
-    m = 0
-    for k in range(M_clusters):
-        centroidM = np.mean(M[YM == k], axis=0)
-        d = centroidN.dot(centroidM)
-        if d >= m:
-            m = d
-            i = k
+    # Get closest customers
+    d = M.dot(centroidN)
+    idx = d.argsort()[-20:][::-1]
     
     row_idx = {tck: i for i, tck in enumerate(set(df['Customer']))}
     inverted_index = dict((cust_id, cust) for cust, cust_id in row_idx.iteritems())
-    cust = set(inverted_index[cust_id] for cust_id in np.array(range(len(YM)))[YM == k]) 
+    cust = set(inverted_index[cust_id] for cust_id in idx) 
     
     return cust
     
