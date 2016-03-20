@@ -1,6 +1,20 @@
 from collections import defaultdict
 
 import numpy as np
+import pandas as pd
+
+
+def GetTimeSeriesFromDF(df, nb_points=None):
+    
+    ds = df.sort_index()
+    ts = pd.Series(ds.index)
+    time = ts.astype(int)
+    time = np.array(time)
+    time -= time[0]
+    if nb_points is not None:
+        time = time[:nb_points]
+    time = time / float(time[-1])
+    return time, ds.ix[:nb_points, :]
 
 def GetTimeSeriesFromCSV(filepath, nb_points=None):
     """ Retrieve time series data from CSV file.
@@ -18,19 +32,10 @@ def GetTimeSeriesFromCSV(filepath, nb_points=None):
         An array of floating point number from 0. to 1. representing time 
         stamps.
     """
-    import pandas as pd
     
     df = pd.read_csv(filepath, parse_dates=['TradeDateTime'],
                      index_col='TradeDateTime')
-    ds = df.sort()
-    ts = pd.Series(ds.index)
-    time = ts.astype(int)
-    time = np.array(time)
-    time -= time[0]
-    if nb_points is not None:
-        time = time[:nb_points]
-    time = time / float(time[-1])
-    return time, ds.ix[:nb_points, :]
+    return GetTimeSeriesFromDF(df, nb_points)
 
 
 def GetInfluenceMatrix(p, customer_ids, stat_func=np.mean):
