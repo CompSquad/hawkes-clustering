@@ -22,7 +22,7 @@ def FormatAndSplit(df, cut_date):
     A (train, test) tuple of coo sparse matrices.
     """
     
-    row_idx = {tck: i for i, tck in enumerate(set(df['Ticker']))}
+    ticker_idx = {tck: i for i, tck in enumerate(set(df['Ticker']))}
     df['TradeDate'] = pd.to_datetime(df['TradeDate'], format='%Y%m%d')
     train = df.ix[df[u'TradeDate'] <= cut_date, :]
     test = df.ix[df[u'TradeDate'] > cut_date, :]
@@ -61,8 +61,8 @@ def FormatAndSplit(df, cut_date):
             test_dense[u'NotionalSum'], bins, labels=labels)
     # test_dense[u'NotionalRating'] = test_dense[u'NotionalSum']
     
-    train_dense['Ticker'] = train_dense['Ticker'].map(lambda x: row_idx[x])
-    test_dense['Ticker'] = test_dense['Ticker'].map(lambda x: row_idx[x])
+    train_dense['Ticker'] = train_dense['Ticker'].map(lambda x: ticker_idx[x])
+    test_dense['Ticker'] = test_dense['Ticker'].map(lambda x: ticker_idx[x])
     
     train_dense.drop(['count', 'NotionalSum'], axis=1, inplace=True)
     test_dense.drop(['count', 'NotionalSum'], axis=1, inplace=True)
@@ -76,8 +76,11 @@ def FormatAndSplit(df, cut_date):
     nb_customers = len(set(df['Customer']))
     nb_tickers = len(set(df['Ticker']))
     
-    return (train, ToSparse(train_dense, nrow=nb_customers, ncol=nb_tickers),
-            test, ToSparse(test_dense, nrow=nb_customers, ncol=nb_tickers))
+    return (train, 
+            ToSparse(train_dense, nrow=nb_customers, ncol=nb_tickers),
+            test, 
+            ToSparse(test_dense, nrow=nb_customers, ncol=nb_tickers), 
+            ticker_idx)
     
 
 def ToSparse(df, nrow, ncol):
@@ -89,47 +92,34 @@ def ToSparse(df, nrow, ncol):
     return train_coo
 
 
-def Cluster(train, rank=10, M_clusters=10, N_clusters=10):
+def GetLatentSpace(train, rank=10):
     
     model = nimfa.Nmf(train.todense(), seed='random_vcol', rank=rank, max_iter=100)
     mfit = model()
     M = np.array(mfit.coef())
     N = np.array(mfit.basis())
     
-    # Cluster customers
-    M = M.T[1:1323]
+    # GetLatentSpace customers
+    M = M.T
     M_normalized = M / np.linalg.norm(M, axis=1)[:, np.newaxis]
-    km_clients = KMeans(100)
-    km_clients.fit(M_normalized)
-    YM = km_clients.predict(M_normalized)
     
-    # Cluster tickers
-    N_clusters = 100
-    N = N[1:1323]
+    # GetLatentSpace tickers
+    N = N
     N_normalized = N / np.linalg.norm(N, axis=1)[:, np.newaxis]
-    km_tickers = KMeans(N_clusters)
-    km_tickers.fit(N_normalized)
-    YN = km_clients.predict(N_normalized)
     
-    return M, N, YM, YN 
+    return M_normalized, N_normalized
 
 
-def GetClosestCustomerCluster(ticker, train, df, rank=10, M_clusters=10, N_clusters=10):
+def GetClosestCustomers(ticker_id, train, rank=10):
     
-    M, N, YM, YN = Cluster(train, M_clusters, N_clusters)
-    row_idx = {tck: i for i, tck in enumerate(set(df['Ticker']))}
+    M, N = GetLatentSpace(train)
     
-    centroidN = N[YN == YN[row_idx['GAZPRU']]][0]
+    centroidN = N[ticker_id]
     
     # Get closest customers
     d = M.dot(centroidN)
     idx = d.argsort()[-20:][::-1]
-    
-    row_idx = {tck: i for i, tck in enumerate(set(df['Customer']))}
-    inverted_index = dict((cust_id, cust) for cust, cust_id in row_idx.iteritems())
-    cust = set(inverted_index[cust_id] for cust_id in idx) 
-    
-    return cust
+    return idx
     
 
 if __name__ == "__main__":
@@ -137,6 +127,7 @@ if __name__ == "__main__":
     df = pd.read_csv('/Users/arnaud/cellule/data/bnpp/ETSAnonymousPricesFull.csv')
     
     cut_date = pd.to_datetime('20131106', format='%Y%m%d')
-    train, test = FormatAndSplit(df, cut_date)
+    train_df, train_coo, test_df, test_coo, ticker_idx = FormatAndSplit(df, cut_date=cut_date)
+    cust = GetClosestCustomers(ticker_idx['GAZPRU'], train_coo, train_df, rank=10)  
     
     print train.head()
