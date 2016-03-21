@@ -23,17 +23,17 @@ def FormatAndSplit(df, cut_date):
     """
     
     ticker_idx = {tck: i for i, tck in enumerate(set(df['Ticker']))}
-    df['TradeDate'] = pd.to_datetime(df['TradeDate'], format='%Y%m%d')
-    train = df.ix[df[u'TradeDate'] <= cut_date, :]
-    test = df.ix[df[u'TradeDate'] > cut_date, :]
+    df['TradeDateKey'] = pd.to_datetime(df['TradeDateKey'], format='%Y%m%d')
+    train = df.ix[df[u'TradeDateKey'] <= cut_date, :]
+    test = df.ix[df[u'TradeDateKey'] > cut_date, :]
     
-    ddata = df.ix[df["BuySell"] == "Buy", [u'Customer', u'NotionalEUR', u'Ticker', u'TradeDate']]
+    ddata = df.ix[df["BuySell"] == "Buy", [u'Customer', u'NotionalEUR', u'Ticker', u'TradeDateKey']]
 
     data_train = pd.DataFrame.copy(ddata)
-    data_train.ix[data_train[u'TradeDate'] <= cut_date, "NotionalEUR"] = 0
+    data_train.ix[data_train[u'TradeDateKey'] <= cut_date, "NotionalEUR"] = 0
     
     data_test = pd.DataFrame.copy(ddata)
-    data_test.ix[data_test[u'TradeDate'] > cut_date, "NotionalEUR"] = 0
+    data_test.ix[data_test[u'TradeDateKey'] > cut_date, "NotionalEUR"] = 0
     
     # Bucket ratings into quantiles.
     cut_count = 10
